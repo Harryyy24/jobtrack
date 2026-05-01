@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>JobTrack</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f8f7f4; --surface: #ffffff; --surface2: #f1efe8;
+    --border: rgba(0,0,0,0.10); --border2: rgba(0,0,0,0.18);
+    --text: #1a1a18; --text2: #5a5a55; --text3: #8a8a85;
+    --accent: #2d5a8e; --accent-bg: #e6f1fb;
+    --radius: 10px; --radius-lg: 14px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.07);
+    --green: #0f6e56; --green-bg: #e1f5ee;
+    --red: #a32d2d; --red-bg: #fcebeb;
+    --yellow: #854f0b; --yellow-bg: #faeeda;
+  }
+  [data-dark="true"] {
+    --bg: #18181a; --surface: #232326; --surface2: #2c2c30;
+    --border: rgba(255,255,255,0.09); --border2: rgba(255,255,255,0.16);
+    --text: #f0efe8; --text2: #a0a09a; --text3: #6a6a65;
+    --accent: #5b9fe3; --accent-bg: #0c2040;
+    --green: #5dcaa5; --green-bg: #04342c;
+    --red: #f09595; --red-bg: #501313;
+    --yellow: #fac775; --yellow-bg: #412402;
+  }
+  body { font-family: 'Georgia', serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; line-height: 1.6; }
+  input, select, textarea, button { font-family: inherit; font-size: 14px; }
+  input, select, textarea { width: 100%; padding: 8px 12px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--surface); color: var(--text); outline: none; transition: border 0.15s; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45,90,142,0.12); }
+  textarea { resize: vertical; min-height: 72px; }
+  button { cursor: pointer; border: none; border-radius: var(--radius); transition: all 0.15s; }
+  .btn-primary { background: var(--accent); color: #fff; padding: 9px 18px; font-weight: 500; }
+  .btn-primary:hover { filter: brightness(1.1); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
+  .btn-ghost { background: transparent; color: var(--text2); padding: 7px 14px; border: 0.5px solid var(--border2); }
+  .btn-ghost:hover { background: var(--surface2); color: var(--text); }
+  .btn-google { background: #fff; color: #3c4043; padding: 10px 20px; border: 1px solid #dadce0; border-radius: 8px; display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+  .btn-google:hover { background: #f8f9fa; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+  .btn-icon { background: transparent; color: var(--text3); padding: 5px 8px; border: 0.5px solid var(--border); border-radius: 6px; font-size: 13px; }
+  .btn-icon:hover { background: var(--surface2); color: var(--text); }
+  label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 4px; font-weight: 500; letter-spacing: 0.03em; text-transform: uppercase; }
+  .field { margin-bottom: 14px; }
+  .card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; box-shadow: var(--shadow); }
+  .layout { display: flex; min-height: 100vh; }
+  .sidebar { width: 220px; min-height: 100vh; background: var(--surface); border-right: 0.5px solid var(--border); display: flex; flex-direction: column; padding: 1.5rem 1rem; flex-shrink: 0; position: fixed; top: 0; left: 0; bottom: 0; overflow-y: auto; }
+  .main { flex: 1; padding: 2rem; margin-left: 220px; }
+  .nav-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: var(--radius); color: var(--text2); font-size: 14px; cursor: pointer; transition: all 0.12s; margin-bottom: 2px; border: none; background: transparent; width: 100%; text-align: left; }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: var(--accent-bg); color: var(--accent); font-weight: 500; }
+  .logo { font-size: 20px; font-weight: 700; color: var(--accent); margin-bottom: 2rem; letter-spacing: -0.02em; }
+  .logo span { color: var(--text3); font-weight: 400; }
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1.5rem; }
+  .stat-card { background: var(--surface2); border-radius: var(--radius); padding: 1rem 1.25rem; }
+  .stat-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .stat-value { font-size: 28px; font-weight: 700; color: var(--text); line-height: 1; }
+  .stat-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 500; letter-spacing: 0.03em; }
+  .badge-applied { background: #e6f1fb; color: #185fa5; }
+  .badge-oa { background: #faeeda; color: #854f0b; }
+  .badge-interview { background: #eaf3de; color: #3b6d11; }
+  .badge-rejected { background: #fcebeb; color: #a32d2d; }
+  .badge-offer { background: #e1f5ee; color: #0f6e56; }
+  [data-dark="true"] .badge-applied { background: #0c2040; color: #85b7eb; }
+  [data-dark="true"] .badge-oa { background: #412402; color: #fac775; }
+  [data-dark="true"] .badge-interview { background: #173404; color: #c0dd97; }
+  [data-dark="true"] .badge-rejected { background: #501313; color: #f09595; }
+  [data-dark="true"] .badge-offer { background: #04342c; color: #5dcaa5; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th { text-align: left; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text3); padding: 10px 12px; border-bottom: 0.5px solid var(--border); white-space: nowrap; }
+  td { padding: 11px 12px; border-bottom: 0.5px solid var(--border); vertical-align: middle; }
+  tr:hover td { background: var(--surface2); }
+  tr:last-child td { border-bottom: none; }
+  .row-link { color: var(--accent); text-decoration: none; }
+  .row-link:hover { text-decoration: underline; }
+  .filters { display: flex; gap: 10px; margin-bottom: 1.25rem; align-items: center; flex-wrap: wrap; }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+  .modal { background: var(--surface); border-radius: var(--radius-lg); padding: 1.75rem; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; border: 0.5px solid var(--border2); }
+  .modal-title { font-size: 17px; font-weight: 600; margin-bottom: 1.25rem; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+  .form-grid .full { grid-column: 1 / -1; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 1.25rem; padding-top: 1rem; border-top: 0.5px solid var(--border); }
+  .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+  .page-title { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+  .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text3); }
+  .sort-btn { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 10px; padding: 0 2px; }
+  .sort-btn:hover { color: var(--accent); }
+  .pill-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .pill-filter { padding: 4px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 0.5px solid var(--border2); background: var(--surface); color: var(--text2); transition: all 0.12s; }
+  .pill-filter.active, .pill-filter:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .dark-toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text3); cursor: pointer; padding: 8px 12px; border-radius: var(--radius); transition: all 0.12s; border: none; background: transparent; width: 100%; }
+  .dark-toggle:hover { background: var(--surface2); color: var(--text); }
+  .toggle-sw { width: 32px; height: 18px; background: var(--border2); border-radius: 9px; position: relative; transition: background 0.15s; flex-shrink: 0; }
+  .toggle-sw.on { background: var(--accent); }
+  .toggle-sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform 0.15s; }
+  .toggle-sw.on::after { transform: translateX(14px); }
+  .actions-cell { display: flex; gap: 4px; }
+  .notes-cell { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text2); font-size: 13px; }
+  .sync-bar { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: var(--radius); font-size: 12px; margin-bottom: 8px; }
+  .sync-bar.ok { background: var(--green-bg); color: var(--green); }
+  .sync-bar.err { background: var(--red-bg); color: var(--red); }
+  .sync-bar.loading { background: var(--yellow-bg); color: var(--yellow); }
+  .sync-bar.idle { background: var(--surface2); color: var(--text3); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+  .dot.spin { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .gdrive-section { border-top: 0.5px solid var(--border); padding-top: 12px; margin-top: 12px; }
+  .gdrive-section-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; padding: 0 12px; }
+  .gdrive-user { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: var(--radius); }
+  .gdrive-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--accent-bg); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--accent); flex-shrink: 0; }
+  .gdrive-name { font-size: 12px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .signin-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 2rem; text-align: center; max-width: 400px; margin: 4rem auto; }
+  .signin-title { font-size: 24px; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
+  .signin-sub { font-size: 14px; color: var(--text3); margin-bottom: 2rem; }
+  .signin-features { text-align: left; margin-bottom: 2rem; display: flex; flex-direction: column; gap: 10px; }
+  .signin-feature { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--text2); }
+  .feature-icon { width: 28px; height: 28px; border-radius: 8px; background: var(--accent-bg); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+  .overflow-x { overflow-x: auto; }
+  @media (max-width: 700px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; }
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-grid .full { grid-column: 1; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback, useMemo, useRef } = React;
+
+/* ── Constants ── */
+const CLIENT_ID = ''; // User must fill this in — see setup instructions below
+const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+const FILE_NAME = 'jobtrack_data.json';
+const STORAGE_KEY = 'jobtrack_apps_v1';
+const GDRIVE_TOKEN_KEY = 'jobtrack_gdrive_token';
+const STATUS_OPTIONS = ['Applied','OA','Interview','Rejected','Offer'];
+const SOURCE_OPTIONS = ['LinkedIn','Referral','Company Website','Indeed','Naukri','AngelList','Twitter/X','Other'];
+const RESUME_OPTIONS = ['Resume v1','Resume v2','Resume v3 (Tech)','Resume v4 (PM)','Custom'];
+const STATUS_BADGE = { Applied:'badge-applied', OA:'badge-oa', Interview:'badge-interview', Rejected:'badge-rejected', Offer:'badge-offer' };
+const EMPTY_FORM = { company:'', role:'', link:'', date: new Date().toISOString().slice(0,10), status:'Applied', resume:'', notes:'', source:'LinkedIn' };
+
+/* ── LocalStorage helpers ── */
+function loadLocal() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; } }
+function saveLocal(apps) { localStorage.setItem(STORAGE_KEY, JSON.stringify(apps)); }
+function makeId() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+/* ── Google Drive API ── */
+async function gdriveRequest(method, url, token, body) {
+  const res = await fetch(url, {
+    method,
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) throw new Error(`Drive API error: ${res.status}`);
+  return res.json();
+}
+
+async function findFile(token) {
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=name='${FILE_NAME}' and trashed=false&fields=files(id,name,modifiedTime)`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  const data = await res.json();
+  return data.files?.[0] || null;
+}
+
+async function readFile(token, fileId) {
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return res.json();
+}
+
+async function saveFileToDrive(token, apps, existingFileId) {
+  const content = JSON.stringify({ apps, savedAt: new Date().toISOString() });
+  const blob = new Blob([content], { type: 'application/json' });
+  if (existingFileId) {
+    const res = await fetch(
+      `https://www.googleapis.com/upload/drive/v3/files/${existingFileId}?uploadType=media`,
+      { method: 'PATCH', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: content }
+    );
+    if (!res.ok) throw new Error('Upload failed');
+    return existingFileId;
+  } else {
+    const meta = await gdriveRequest('POST',
+      'https://www.googleapis.com/drive/v3/files?fields=id',
+      token, { name: FILE_NAME, mimeType: 'application/json' }
+    );
+    const res = await fetch(
+      `https://www.googleapis.com/upload/drive/v3/files/${meta.id}?uploadType=media`,
+      { method: 'PATCH', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: content }
+    );
+    if (!res.ok) throw new Error('Upload failed');
+    return meta.id;
+  }
+}
+
+/* ── OAuth popup ── */
+function openGoogleAuth(clientId) {
+  return new Promise((resolve, reject) => {
+    const state = Math.random().toString(36).slice(2);
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: window.location.origin + window.location.pathname,
+      response_type: 'token',
+      scope: SCOPES,
+      state,
+      prompt: 'select_account',
+    });
+    const popup = window.open(`https://accounts.google.com/o/oauth2/v2/auth?${params}`, 'gdrive_auth', 'width=500,height=600,left=400,top=100');
+    if (!popup) { reject(new Error('Popup blocked')); return; }
+    const interval = setInterval(() => {
+      try {
+        const url = popup.location.href;
+        if (url.includes('access_token')) {
+          const hash = new URLSearchParams(popup.location.hash.slice(1));
+          const token = hash.get('access_token');
+          const expiresIn = parseInt(hash.get('expires_in') || '3600');
+          clearInterval(interval);
+          popup.close();
+          resolve({ token, expiresAt: Date.now() + expiresIn * 1000 });
+        }
+      } catch {}
+      if (popup.closed) { clearInterval(interval); reject(new Error('Popup closed')); }
+    }, 300);
+  });
+}
+
+/* ── Small components ── */
+function Badge({ status }) {
+  return <span className={`badge ${STATUS_BADGE[status]||'badge-applied'}`}>{status}</span>;
+}
+
+function SyncBar({ status, lastSynced, onSync }) {
+  const map = {
+    idle: { cls:'idle', icon:'○', text:'Not synced yet' },
+    loading: { cls:'loading', icon:'●', text:'Syncing to Google Drive…' },
+    ok: { cls:'ok', icon:'●', text: lastSynced ? `Saved to Drive · ${lastSynced}` : 'Saved to Drive' },
+    error: { cls:'err', icon:'●', text:'Sync failed — click to retry' },
+  };
+  const s = map[status] || map.idle;
+  return (
+    <div className={`sync-bar ${s.cls}`} style={{cursor: status==='error'?'pointer':'default'}} onClick={status==='error'?onSync:undefined}>
+      <div className={`dot ${status==='loading'?'spin':''}`}/>
+      <span style={{flex:1}}>{s.text}</span>
+      {status==='ok' && <span style={{fontSize:'11px',opacity:0.7}}>✓</span>}
+    </div>
+  );
+}
+
+function Modal({ title, onClose, children }) {
+  return (
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal">
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'1.25rem'}}>
+          <div className="modal-title">{title}</div>
+          <button className="btn-icon" onClick={onClose} style={{fontSize:'16px',padding:'4px 8px'}}>✕</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function AppForm({ initial, onSave, onClose }) {
+  const [form, setForm] = useState(initial || EMPTY_FORM);
+  const set = k => e => setForm(f=>({...f,[k]:e.target.value}));
+  const handleSave = () => {
+    if (!form.company.trim() || !form.role.trim()) return alert('Company and Role are required.');
+    onSave(form);
+  };
+  return (
+    <>
+      <div className="form-grid">
+        <div className="field"><label>Company *</label><input value={form.company} onChange={set('company')} placeholder="e.g. Google"/></div>
+        <div className="field"><label>Role *</label><input value={form.role} onChange={set('role')} placeholder="e.g. Software Engineer"/></div>
+        <div className="field full"><label>Job Link</label><input value={form.link} onChange={set('link')} placeholder="https://..."/></div>
+        <div className="field"><label>Date Applied</label><input type="date" value={form.date} onChange={set('date')}/></div>
+        <div className="field"><label>Status</label><select value={form.status} onChange={set('status')}>{STATUS_OPTIONS.map(s=><option key={s}>{s}</option>)}</select></div>
+        <div className="field"><label>Resume Used</label><select value={form.resume} onChange={set('resume')}><option value="">— Select —</option>{RESUME_OPTIONS.map(r=><option key={r}>{r}</option>)}</select></div>
+        <div className="field"><label>Source</label><select value={form.source} onChange={set('source')}>{SOURCE_OPTIONS.map(s=><option key={s}>{s}</option>)}</select></div>
+        <div className="field full"><label>Notes</label><textarea value={form.notes} onChange={set('notes')} placeholder="Recruiter name, feedback, next steps…"/></div>
+      </div>
+      <div className="modal-actions">
+        <button className="btn-ghost" onClick={onClose}>Cancel</button>
+        <button className="btn-primary" onClick={handleSave}>{initial?'Save Changes':'Add Application'}</button>
+      </div>
+    </>
+  );
+}
+
+/* ── Setup instructions modal ── */
+function SetupModal({ onClose, onSave }) {
+  const [cid, setCid] = useState('');
+  return (
+    <div className="modal-overlay">
+      <div className="modal" style={{maxWidth:520}}>
+        <div className="modal-title">🔧 Google Drive Setup (One-time)</div>
+        <p style={{fontSize:'13px',color:'var(--text2)',marginBottom:'1rem',lineHeight:'1.7'}}>
+          To sync with Google Drive, you need a free Google OAuth Client ID. Follow these steps:
+        </p>
+        <ol style={{fontSize:'13px',color:'var(--text2)',paddingLeft:'1.2rem',lineHeight:'2',marginBottom:'1rem'}}>
+          <li>Go to <a href="https://console.cloud.google.com" target="_blank" style={{color:'var(--accent)'}}>console.cloud.google.com</a></li>
+          <li>Create a project → Enable <strong>Google Drive API</strong></li>
+          <li>Go to <strong>APIs &amp; Services → Credentials</strong></li>
+          <li>Create <strong>OAuth 2.0 Client ID</strong> → Web application</li>
+          <li>Add <code style={{background:'var(--surface2)',padding:'1px 6px',borderRadius:4}}>{window.location.origin}</code> to Authorized JS origins</li>
+          <li>Copy your <strong>Client ID</strong> and paste below</li>
+        </ol>
+        <div className="field">
+          <label>Your Google OAuth Client ID</label>
+          <input value={cid} onChange={e=>setCid(e.target.value)} placeholder="xxxxxxxxxxxx.apps.googleusercontent.com"/>
+        </div>
+        <div className="modal-actions">
+          <button className="btn-ghost" onClick={onClose}>Skip for now</button>
+          <button className="btn-primary" onClick={()=>{ if(cid.trim()) { onSave(cid.trim()); onClose(); } else alert('Paste your Client ID first.'); }}>Save &amp; Connect</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Dashboard ── */
+function Dashboard({ apps }) {
+  const counts = useMemo(()=>({
+    total: apps.length,
+    interviews: apps.filter(a=>a.status==='Interview').length,
+    offers: apps.filter(a=>a.status==='Offer').length,
+    rejections: apps.filter(a=>a.status==='Rejected').length,
+  }), [apps]);
+  const byStatus = STATUS_OPTIONS.map(s=>({ s, c: apps.filter(a=>a.status===s).length }));
+  const recent = [...apps].sort((a,b)=>b.date>a.date?1:-1).slice(0,5);
+  return (
+    <div>
+      <div className="page-header">
+        <div className="page-title">Dashboard</div>
+        <span style={{fontSize:'12px',color:'var(--text3)'}}>Your job search at a glance</span>
+      </div>
+      <div className="stat-grid">
+        {[
+          {label:'Total Applied', value:counts.total, sub:'applications'},
+          {label:'Interviews', value:counts.interviews, sub:`${counts.total?Math.round(counts.interviews/counts.total*100):0}% rate`},
+          {label:'Offers', value:counts.offers, sub:counts.offers===1?'congratulations!':'keep going!'},
+          {label:'Rejected', value:counts.rejections, sub:'part of the journey'},
+        ].map(s=>(
+          <div key={s.label} className="stat-card">
+            <div className="stat-label">{s.label}</div>
+            <div className="stat-value">{s.value}</div>
+            <div className="stat-sub">{s.sub}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'16px'}}>
+        <div className="card">
+          <div style={{fontSize:'13px',fontWeight:'500',color:'var(--text2)',marginBottom:'14px',textTransform:'uppercase',letterSpacing:'0.05em'}}>Status Breakdown</div>
+          {byStatus.map(({s,c})=>(
+            <div key={s} style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'10px'}}>
+              <Badge status={s}/>
+              <div style={{flex:1,height:'6px',background:'var(--surface2)',borderRadius:'3px',overflow:'hidden'}}>
+                <div style={{height:'100%',width:`${counts.total?(c/counts.total)*100:0}%`,background:'var(--accent)',borderRadius:'3px',transition:'width 0.4s'}}/>
+              </div>
+              <span style={{fontSize:'13px',color:'var(--text2)',minWidth:'20px',textAlign:'right'}}>{c}</span>
+            </div>
+          ))}
+        </div>
+        <div className="card">
+          <div style={{fontSize:'13px',fontWeight:'500',color:'var(--text2)',marginBottom:'14px',textTransform:'uppercase',letterSpacing:'0.05em'}}>Recent Applications</div>
+          {recent.length===0 && <div style={{color:'var(--text3)',fontSize:'13px'}}>No applications yet.</div>}
+          {recent.map(a=>(
+            <div key={a.id} style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'10px'}}>
+              <div style={{width:34,height:34,borderRadius:8,background:'var(--surface2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'13px',fontWeight:'600',color:'var(--text2)',flexShrink:0}}>
+                {a.company.charAt(0).toUpperCase()}
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:'13px',fontWeight:'500',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{a.company}</div>
+                <div style={{fontSize:'12px',color:'var(--text3)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{a.role}</div>
+              </div>
+              <Badge status={a.status}/>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Applications view ── */
+function ApplicationsView({ apps, onAdd, onEdit, onDelete }) {
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [sortField, setSortField] = useState('date');
+  const [sortDir, setSortDir] = useState('desc');
+  const [addOpen, setAddOpen] = useState(false);
+  const [editApp, setEditApp] = useState(null);
+
+  const toggleSort = field => {
+    if (sortField===field) setSortDir(d=>d==='asc'?'desc':'asc');
+    else { setSortField(field); setSortDir('asc'); }
+  };
+
+  const filtered = useMemo(()=>{
+    let r = [...apps];
+    if (statusFilter!=='All') r = r.filter(a=>a.status===statusFilter);
+    if (search.trim()) { const q=search.toLowerCase(); r=r.filter(a=>a.company.toLowerCase().includes(q)||a.role.toLowerCase().includes(q)); }
+    r.sort((a,b)=>{ const av=a[sortField]||'', bv=b[sortField]||''; if(av<bv) return sortDir==='asc'?-1:1; if(av>bv) return sortDir==='asc'?1:-1; return 0; });
+    return r;
+  }, [apps,statusFilter,search,sortField,sortDir]);
+
+  const exportCSV = () => {
+    const header = ['Company','Role','Link','Date','Status','Resume','Source','Notes'];
+    const rows = apps.map(a=>[a.company,a.role,a.link,a.date,a.status,a.resume,a.source,a.notes].map(v=>`"${(v||'').replace(/"/g,'""')}"`).join(','));
+    const csv = [header.join(','),...rows].join('\n');
+    const blob = new Blob([csv],{type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const el = document.createElement('a'); el.href=url; el.download='job_applications.csv'; el.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const SortIcon = ({field}) => (
+    <button className="sort-btn" onClick={()=>toggleSort(field)}>
+      {sortField===field?(sortDir==='asc'?'▲':'▼'):'⇅'}
+    </button>
+  );
+
+  return (
+    <div>
+      <div className="page-header">
+        <div className="page-title">Applications</div>
+        <div style={{display:'flex',gap:'8px'}}>
+          <button className="btn-ghost" onClick={exportCSV} style={{display:'flex',alignItems:'center',gap:'6px'}}>↓ Export CSV</button>
+          <button className="btn-primary" onClick={()=>setAddOpen(true)}>+ Add Application</button>
+        </div>
+      </div>
+      <div className="pill-row">
+        {['All',...STATUS_OPTIONS].map(s=>(
+          <button key={s} className={`pill-filter ${statusFilter===s?'active':''}`} onClick={()=>setStatusFilter(s)}>{s}</button>
+        ))}
+      </div>
+      <div className="filters">
+        <input placeholder="Search by company or role…" value={search} onChange={e=>setSearch(e.target.value)} style={{maxWidth:'280px'}}/>
+        <span style={{fontSize:'12px',color:'var(--text3)',marginLeft:'auto'}}>{filtered.length} result{filtered.length!==1?'s':''}</span>
+      </div>
+      <div className="card" style={{padding:0}}>
+        {filtered.length===0 ? (
+          <div className="empty-state">
+            <div style={{fontSize:'36px',marginBottom:'12px'}}>📋</div>
+            <div style={{fontSize:'15px',fontWeight:'500',color:'var(--text2)',marginBottom:'6px'}}>No applications found</div>
+            <div style={{fontSize:'13px'}}>Try adjusting your filters or add a new application.</div>
+          </div>
+        ) : (
+          <div className="overflow-x">
+            <table>
+              <thead>
+                <tr>
+                  <th>Company <SortIcon field="company"/></th>
+                  <th>Role <SortIcon field="role"/></th>
+                  <th>Status</th>
+                  <th>Date <SortIcon field="date"/></th>
+                  <th>Source</th>
+                  <th>Notes</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(a=>(
+                  <tr key={a.id}>
+                    <td>
+                      <div style={{fontWeight:'500'}}>{a.company}</div>
+                      {a.resume && <div style={{fontSize:'11px',color:'var(--text3)'}}>{a.resume}</div>}
+                    </td>
+                    <td>{a.link?<a href={a.link} target="_blank" rel="noopener" className="row-link">{a.role}</a>:a.role}</td>
+                    <td><Badge status={a.status}/></td>
+                    <td style={{color:'var(--text2)',fontSize:'13px',whiteSpace:'nowrap'}}>{a.date}</td>
+                    <td style={{color:'var(--text3)',fontSize:'12px'}}>{a.source}</td>
+                    <td><div className="notes-cell">{a.notes||<span style={{color:'var(--text3)'}}>—</span>}</div></td>
+                    <td>
+                      <div className="actions-cell">
+                        <button className="btn-icon" onClick={()=>setEditApp(a)} title="Edit">✎</button>
+                        <button className="btn-icon" onClick={()=>{if(confirm(`Delete ${a.company}?`)) onDelete(a.id);}} title="Delete">✕</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+      {addOpen && <Modal title="Add Application" onClose={()=>setAddOpen(false)}><AppForm onSave={form=>{onAdd(form);setAddOpen(false);}} onClose={()=>setAddOpen(false)}/></Modal>}
+      {editApp && <Modal title="Edit Application" onClose={()=>setEditApp(null)}><AppForm initial={editApp} onSave={form=>{onEdit(editApp.id,form);setEditApp(null);}} onClose={()=>setEditApp(null)}/></Modal>}
+    </div>
+  );
+}
+
+/* ── Main App ── */
+function App() {
+  const [apps, setApps] = useState(loadLocal);
+  const [page, setPage] = useState('dashboard');
+  const [dark, setDark] = useState(()=>localStorage.getItem('jobtrack_dark')==='1');
+
+  /* Google Drive state */
+  const [clientId, setClientId] = useState(()=>localStorage.getItem('jobtrack_client_id')||'');
+  const [token, setToken] = useState(null);
+  const [userEmail, setUserEmail] = useState('');
+  const [driveFileId, setDriveFileId] = useState(null);
+  const [syncStatus, setSyncStatus] = useState('idle'); // idle | loading | ok | error
+  const [lastSynced, setLastSynced] = useState('');
+  const [showSetup, setShowSetup] = useState(false);
+  const syncTimeout = useRef(null);
+
+  /* Theme */
+  useEffect(()=>{
+    document.documentElement.setAttribute('data-dark', dark?'true':'false');
+    localStorage.setItem('jobtrack_dark', dark?'1':'0');
+  }, [dark]);
+
+  /* Save to LocalStorage whenever apps change */
+  useEffect(()=>{ saveLocal(apps); }, [apps]);
+
+  /* Auto-sync to Drive after apps change (debounced 1.5s) */
+  useEffect(()=>{
+    if (!token) return;
+    if (syncTimeout.current) clearTimeout(syncTimeout.current);
+    syncTimeout.current = setTimeout(()=>{ syncToDrive(apps); }, 1500);
+    return ()=>clearTimeout(syncTimeout.current);
+  }, [apps, token]);
+
+  /* Fetch user info from token */
+  async function fetchUserInfo(tok) {
+    try {
+      const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { Authorization: `Bearer ${tok}` } });
+      const info = await res.json();
+      setUserEmail(info.email || '');
+    } catch {}
+  }
+
+  /* Load data from Drive on sign in */
+  async function loadFromDrive(tok) {
+    setSyncStatus('loading');
+    try {
+      const file = await findFile(tok);
+      if (file) {
+        setDriveFileId(file.id);
+        const data = await readFile(tok, file.id);
+        if (data?.apps && Array.isArray(data.apps)) {
+          setApps(data.apps);
+          saveLocal(data.apps);
+        }
+        setSyncStatus('ok');
+        setLastSynced('just now');
+      } else {
+        setSyncStatus('idle');
+      }
+    } catch (e) {
+      console.error(e);
+      setSyncStatus('error');
+    }
+  }
+
+  /* Sync apps array to Drive */
+  async function syncToDrive(currentApps) {
+    if (!token) return;
+    setSyncStatus('loading');
+    try {
+      const fid = await saveFileToDrive(token, currentApps, driveFileId);
+      setDriveFileId(fid);
+      setSyncStatus('ok');
+      const now = new Date();
+      setLastSynced(`${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`);
+    } catch (e) {
+      console.error(e);
+      setSyncStatus('error');
+    }
+  }
+
+  /* Sign in handler */
+  async function handleSignIn() {
+    if (!clientId) { setShowSetup(true); return; }
+    try {
+      const { token: tok } = await openGoogleAuth(clientId);
+      setToken(tok);
+      await fetchUserInfo(tok);
+      await loadFromDrive(tok);
+    } catch(e) {
+      alert('Sign-in failed or popup was blocked. Please allow popups for this page.');
+    }
+  }
+
+  function handleSignOut() {
+    setToken(null); setUserEmail(''); setDriveFileId(null); setSyncStatus('idle'); setLastSynced('');
+  }
+
+  function saveClientId(cid) {
+    setClientId(cid);
+    localStorage.setItem('jobtrack_client_id', cid);
+  }
+
+  /* CRUD */
+  const addApp = useCallback(form=>setApps(a=>[{...form,id:makeId()},...a]),[]);
+  const editApp = useCallback((id,form)=>setApps(a=>a.map(x=>x.id===id?{...form,id}:x)),[]);
+  const deleteApp = useCallback(id=>setApps(a=>a.filter(x=>x.id!==id)),[]);
+
+  const initials = userEmail ? userEmail.charAt(0).toUpperCase() : '';
+
+  return (
+    <div className="layout" data-dark={dark}>
+      <div className="sidebar">
+        <div className="logo">Job<span>Track</span></div>
+
+        {[{key:'dashboard',icon:'◉',label:'Dashboard'},{key:'applications',icon:'☰',label:'Applications'}].map(n=>(
+          <button key={n.key} className={`nav-item ${page===n.key?'active':''}`} onClick={()=>setPage(n.key)}>
+            <span style={{fontSize:'14px'}}>{n.icon}</span>{n.label}
+          </button>
+        ))}
+
+        <div className="gdrive-section">
+          <div className="gdrive-section-label">Google Drive Sync</div>
+          {token ? (
+            <>
+              <SyncBar status={syncStatus} lastSynced={lastSynced} onSync={()=>syncToDrive(apps)}/>
+              <div className="gdrive-user">
+                <div className="gdrive-avatar">{initials}</div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div className="gdrive-name">{userEmail}</div>
+                  <button onClick={handleSignOut} style={{background:'none',border:'none',fontSize:'11px',color:'var(--text3)',cursor:'pointer',padding:0}}>Sign out</button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div style={{padding:'0 4px'}}>
+              <button className="btn-ghost" onClick={handleSignIn} style={{width:'100%',fontSize:'12px',display:'flex',alignItems:'center',gap:'6px',justifyContent:'center',padding:'7px 10px'}}>
+                <span>☁</span> Connect Google Drive
+              </button>
+              {!clientId && (
+                <button onClick={()=>setShowSetup(true)} style={{background:'none',border:'none',fontSize:'11px',color:'var(--text3)',cursor:'pointer',padding:'6px 4px',width:'100%',textAlign:'center'}}>
+                  Setup required →
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div style={{marginTop:'auto',paddingTop:'12px',borderTop:'0.5px solid var(--border)'}}>
+          <div style={{fontSize:'11px',color:'var(--text3)',padding:'4px 12px',marginBottom:'4px'}}>
+            {apps.length} application{apps.length!==1?'s':''} · local
+          </div>
+          <button className="dark-toggle" onClick={()=>setDark(d=>!d)}>
+            <div className={`toggle-sw ${dark?'on':''}`}/>
+            {dark?'Light mode':'Dark mode'}
+          </button>
+        </div>
+      </div>
+
+      <div className="main">
+        {page==='dashboard' && <Dashboard apps={apps}/>}
+        {page==='applications' && <ApplicationsView apps={apps} onAdd={addApp} onEdit={editApp} onDelete={deleteApp}/>}
+      </div>
+
+      {showSetup && <SetupModal onClose={()=>setShowSetup(false)} onSave={saveClientId}/>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
