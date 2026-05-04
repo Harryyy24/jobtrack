@@ -4,6 +4,10 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>JobTrack</title>
+<meta property="og:title" content="JobTrack — Job Application Tracker" />
+<meta property="og:description" content="Track all your job applications in one place. Filter by status, sync to Google Drive, and never lose track of an opportunity." />
+<meta property="og:type" content="website" />
+<meta name="description" content="Track all your job applications in one place. Filter by status, sync to Google Drive, and never lose track of an opportunity." />
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -142,7 +146,7 @@ const FILE_NAME = 'jobtrack_data.json';
 const STORAGE_KEY = 'jobtrack_apps_v1';
 const GDRIVE_TOKEN_KEY = 'jobtrack_gdrive_token';
 const STATUS_OPTIONS = ['Applied','OA','Interview','Rejected','Offer'];
-const SOURCE_OPTIONS = ['LinkedIn','Referral','Company Website','Indeed','Naukri','AngelList','Twitter/X','Other'];
+const SOURCE_OPTIONS = ['LinkedIn','Referral','Company Website','Indeed','Naukri','AngelList','Twitter/X','WhatsApp','Other'];
 const RESUME_OPTIONS = ['Resume v1','Resume v2','Resume v3 (Tech)','Resume v4 (PM)','Custom'];
 const STATUS_BADGE = { Applied:'badge-applied', OA:'badge-oa', Interview:'badge-interview', Rejected:'badge-rejected', Offer:'badge-offer' };
 const EMPTY_FORM = { company:'', role:'', link:'', date: new Date().toISOString().slice(0,10), status:'Applied', resume:'', notes:'', source:'LinkedIn' };
@@ -298,6 +302,175 @@ function AppForm({ initial, onSave, onClose }) {
   );
 }
 
+/* ── Bulk Import Modal ── */
+const BULK_EXAMPLE = JSON.stringify([
+  { company: "Google", role: "Software Engineer", date: "2025-05-01", status: "Applied", source: "LinkedIn", link: "https://careers.google.com", notes: "Applied via referral" },
+  { company: "Stripe", role: "Backend Engineer", date: "2025-05-02", status: "OA", source: "Company Website", link: "", notes: "" }
+], null, 2);
+
+function BulkImportModal({ onClose, onImport, existingApps }) {
+  const [raw, setRaw] = useState('');
+  const [parsed, setParsed] = useState(null);
+  const [error, setError] = useState('');
+  const [step, setStep] = useState('input'); // 'input' | 'preview'
+
+  function handleParse() {
+    setError('');
+    if (!raw.trim()) { setError('Please paste JSON data.'); return; }
+    let data;
+    try { data = JSON.parse(raw); } catch(e) { setError('Invalid JSON: ' + e.message); return; }
+    if (!Array.isArray(data)) { setError('JSON must be an array of job objects [ {...}, {...} ]'); return; }
+    if (data.length === 0) { setError('Array is empty — nothing to import.'); return; }
+    // Normalize each entry
+    const normalized = data.map((item, i) => {
+      if (typeof item !== 'object' || item === null) throw new Error(`Item ${i} is not an object`);
+      const company = (item.company || item.Company || '').toString().trim();
+      const role = (item.role || item.Role || item.position || item.Position || item.title || item.Title || '').toString().trim();
+      if (!company || !role) return { _error: `Row ${i+1}: missing "company" or "role"`, ...item };
+      const rawDate = item.date || item.Date || item.dateApplied || item.date_applied || '';
+      const date = rawDate ? rawDate.toString().slice(0,10) : new Date().toISOString().slice(0,10);
+      const status = STATUS_OPTIONS.includes(item.status || item.Status) ? (item.status || item.Status) : 'Applied';
+      const source = SOURCE_OPTIONS.includes(item.source || item.Source) ? (item.source || item.Source) : 'Other';
+      return {
+        company, role,
+        link: (item.link || item.Link || item.url || item.URL || '').toString().trim(),
+        date, status,
+        resume: (item.resume || item.Resume || '').toString().trim(),
+        source,
+        notes: (item.notes || item.Notes || '').toString().trim(),
+      };
+    });
+    // Check for duplicates against existing apps
+    const existingKeys = new Set(existingApps.map(a => `${a.company.toLowerCase()}|${a.role.toLowerCase()}`));
+    const seenKeys = new Set();
+    const withDupFlags = normalized.map((item, i) => {
+      if (item._error) return item;
+      const key = `${item.company.toLowerCase()}|${item.role.toLowerCase()}`;
+      if (existingKeys.has(key)) return { ...item, _duplicate: `Row ${i+1}: "${item.company} – ${item.role}" already exists in your tracker` };
+      if (seenKeys.has(key)) return { ...item, _duplicate: `Row ${i+1}: "${item.company} – ${item.role}" appears more than once in this import` };
+      seenKeys.add(key);
+      return item;
+    });
+    setParsed(withDupFlags);
+    setStep('preview');
+  }
+
+  const valid = parsed ? parsed.filter(p => !p._error && !p._duplicate) : [];
+  const invalid = parsed ? parsed.filter(p => p._error) : [];
+  const duplicates = parsed ? parsed.filter(p => p._duplicate && !p._error) : [];
+
+  function handleImport() {
+    onImport(valid);
+    onClose();
+  }
+
+  return (
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal" style={{maxWidth:'660px'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'1.25rem'}}>
+          <div className="modal-title">{step==='input'?'⬆ Bulk Import via JSON':'Preview Import'}</div>
+          <button className="btn-icon" onClick={onClose} style={{fontSize:'16px',padding:'4px 8px'}}>✕</button>
+        </div>
+
+        {step === 'input' && (
+          <>
+            <p style={{fontSize:'13px',color:'var(--text2)',marginBottom:'10px',lineHeight:'1.6'}}>
+              Paste a JSON array of job objects. Each item should have at minimum <code style={{background:'var(--surface2)',padding:'1px 5px',borderRadius:4}}>company</code> and <code style={{background:'var(--surface2)',padding:'1px 5px',borderRadius:4}}>role</code>.
+              Optional fields: <code style={{background:'var(--surface2)',padding:'1px 5px',borderRadius:4}}>date, status, link, source, resume, notes</code>.
+            </p>
+            <div className="field">
+              <label>JSON Data</label>
+              <textarea
+                value={raw}
+                onChange={e=>{setRaw(e.target.value);setError('');}}
+                placeholder={BULK_EXAMPLE}
+                style={{minHeight:'220px',fontFamily:'monospace',fontSize:'12px',lineHeight:'1.5'}}
+              />
+            </div>
+            {error && <div style={{color:'var(--red)',fontSize:'12px',marginBottom:'10px',padding:'8px 10px',background:'var(--red-bg)',borderRadius:'var(--radius)'}}>⚠ {error}</div>}
+            <div style={{display:'flex',gap:'8px',alignItems:'center',marginBottom:'12px'}}>
+              <button className="btn-ghost" style={{fontSize:'12px',padding:'5px 10px'}}
+                onClick={()=>setRaw(BULK_EXAMPLE)}>Load example</button>
+              <button className="btn-ghost" style={{fontSize:'12px',padding:'5px 10px'}}
+                onClick={()=>{setRaw('');setError('');}}>Clear</button>
+            </div>
+            <div className="modal-actions">
+              <button className="btn-ghost" onClick={onClose}>Cancel</button>
+              <button className="btn-primary" onClick={handleParse}>Parse & Preview →</button>
+            </div>
+          </>
+        )}
+
+        {step === 'preview' && parsed && (
+          <>
+            <div style={{display:'flex',gap:'10px',marginBottom:'14px',flexWrap:'wrap'}}>
+              <div style={{background:'var(--green-bg)',color:'var(--green)',padding:'6px 12px',borderRadius:'var(--radius)',fontSize:'12px',fontWeight:'500'}}>
+                ✓ {valid.length} valid row{valid.length!==1?'s':''}
+              </div>
+              {invalid.length > 0 && (
+                <div style={{background:'var(--red-bg)',color:'var(--red)',padding:'6px 12px',borderRadius:'var(--radius)',fontSize:'12px',fontWeight:'500'}}>
+                  ✕ {invalid.length} row{invalid.length!==1?'s':''} will be skipped
+                </div>
+              )}
+              {duplicates.length > 0 && (
+                <div style={{background:'var(--yellow-bg)',color:'var(--yellow)',padding:'6px 12px',borderRadius:'var(--radius)',fontSize:'12px',fontWeight:'500'}}>
+                  ⚠ {duplicates.length} duplicate{duplicates.length!==1?'s':''} skipped
+                </div>
+              )}
+            </div>
+
+            {invalid.length > 0 && (
+              <div style={{marginBottom:'12px',padding:'10px',background:'var(--red-bg)',borderRadius:'var(--radius)',fontSize:'12px',color:'var(--red)'}}>
+                <strong>Skipped rows (errors):</strong>
+                {invalid.map((e,i)=><div key={i} style={{marginTop:'3px'}}>• {e._error}</div>)}
+              </div>
+            )}
+            {duplicates.length > 0 && (
+              <div style={{marginBottom:'12px',padding:'10px',background:'var(--yellow-bg)',borderRadius:'var(--radius)',fontSize:'12px',color:'var(--yellow)'}}>
+                <strong>Skipped duplicates:</strong>
+                {duplicates.map((e,i)=><div key={i} style={{marginTop:'3px'}}>• {e._duplicate}</div>)}
+              </div>
+            )}
+
+            <div style={{maxHeight:'280px',overflowY:'auto',border:'0.5px solid var(--border)',borderRadius:'var(--radius)'}}>
+              <table style={{fontSize:'12px'}}>
+                <thead>
+                  <tr>
+                    <th style={{padding:'7px 10px'}}>Company</th>
+                    <th style={{padding:'7px 10px'}}>Role</th>
+                    <th style={{padding:'7px 10px'}}>Date</th>
+                    <th style={{padding:'7px 10px'}}>Status</th>
+                    <th style={{padding:'7px 10px'}}>Source</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {valid.map((a,i)=>(
+                    <tr key={i}>
+                      <td style={{padding:'7px 10px',fontWeight:'500'}}>{a.company}</td>
+                      <td style={{padding:'7px 10px',color:'var(--text2)'}}>{a.role}</td>
+                      <td style={{padding:'7px 10px',color:'var(--text3)',whiteSpace:'nowrap'}}>{a.date}</td>
+                      <td style={{padding:'7px 10px'}}><Badge status={a.status}/></td>
+                      <td style={{padding:'7px 10px',color:'var(--text3)'}}>{a.source}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="modal-actions">
+              <button className="btn-ghost" onClick={()=>setStep('input')}>← Back</button>
+              <button className="btn-ghost" onClick={onClose}>Cancel</button>
+              <button className="btn-primary" onClick={handleImport} disabled={valid.length===0}>
+                Import {valid.length} Application{valid.length!==1?'s':''}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ── Setup instructions modal ── */
 function SetupModal({ onClose, onSave }) {
   const [cid, setCid] = useState('');
@@ -394,13 +567,14 @@ function Dashboard({ apps }) {
 }
 
 /* ── Applications view ── */
-function ApplicationsView({ apps, onAdd, onEdit, onDelete }) {
+function ApplicationsView({ apps, onAdd, onEdit, onDelete, onBulkImport }) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [sortField, setSortField] = useState('date');
   const [sortDir, setSortDir] = useState('desc');
   const [addOpen, setAddOpen] = useState(false);
   const [editApp, setEditApp] = useState(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const toggleSort = field => {
     if (sortField===field) setSortDir(d=>d==='asc'?'desc':'asc');
@@ -437,6 +611,7 @@ function ApplicationsView({ apps, onAdd, onEdit, onDelete }) {
         <div className="page-title">Applications</div>
         <div style={{display:'flex',gap:'8px'}}>
           <button className="btn-ghost" onClick={exportCSV} style={{display:'flex',alignItems:'center',gap:'6px'}}>↓ Export CSV</button>
+          <button className="btn-ghost" onClick={()=>setBulkOpen(true)} style={{display:'flex',alignItems:'center',gap:'6px'}}>⬆ Bulk Import</button>
           <button className="btn-primary" onClick={()=>setAddOpen(true)}>+ Add Application</button>
         </div>
       </div>
@@ -497,6 +672,7 @@ function ApplicationsView({ apps, onAdd, onEdit, onDelete }) {
       </div>
       {addOpen && <Modal title="Add Application" onClose={()=>setAddOpen(false)}><AppForm onSave={form=>{onAdd(form);setAddOpen(false);}} onClose={()=>setAddOpen(false)}/></Modal>}
       {editApp && <Modal title="Edit Application" onClose={()=>setEditApp(null)}><AppForm initial={editApp} onSave={form=>{onEdit(editApp.id,form);setEditApp(null);}} onClose={()=>setEditApp(null)}/></Modal>}
+      {bulkOpen && <BulkImportModal onClose={()=>setBulkOpen(false)} onImport={jobs=>{onBulkImport(jobs);setBulkOpen(false);}} existingApps={apps}/>}
     </div>
   );
 }
@@ -608,6 +784,7 @@ function App() {
   const addApp = useCallback(form=>setApps(a=>[{...form,id:makeId()},...a]),[]);
   const editApp = useCallback((id,form)=>setApps(a=>a.map(x=>x.id===id?{...form,id}:x)),[]);
   const deleteApp = useCallback(id=>setApps(a=>a.filter(x=>x.id!==id)),[]);
+  const bulkImport = useCallback(jobs=>setApps(a=>[...jobs.map(j=>({...j,id:makeId()})),...a]),[]);
 
   const initials = userEmail ? userEmail.charAt(0).toUpperCase() : '';
 
@@ -662,7 +839,7 @@ function App() {
 
       <div className="main">
         {page==='dashboard' && <Dashboard apps={apps}/>}
-        {page==='applications' && <ApplicationsView apps={apps} onAdd={addApp} onEdit={editApp} onDelete={deleteApp}/>}
+        {page==='applications' && <ApplicationsView apps={apps} onAdd={addApp} onEdit={editApp} onDelete={deleteApp} onBulkImport={bulkImport}/>}
       </div>
 
       {showSetup && <SetupModal onClose={()=>setShowSetup(false)} onSave={saveClientId}/>}
