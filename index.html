@@ -149,7 +149,7 @@ const STATUS_OPTIONS = ['Applied','OA','Interview','Rejected','Offer'];
 const SOURCE_OPTIONS = ['LinkedIn','Referral','Company Website','Indeed','Naukri','AngelList','Twitter/X','WhatsApp','Other'];
 const RESUME_OPTIONS = ['Resume v1','Resume v2','Resume v3 (Tech)','Resume v4 (PM)','Custom'];
 const STATUS_BADGE = { Applied:'badge-applied', OA:'badge-oa', Interview:'badge-interview', Rejected:'badge-rejected', Offer:'badge-offer' };
-const EMPTY_FORM = { company:'', role:'', link:'', date: new Date().toISOString().slice(0,10), status:'Applied', resume:'', notes:'', source:'LinkedIn' };
+const EMPTY_FORM = { company:'', role:'', link:'', date: new Date().toISOString().slice(0,10), status:'Applied', resume:'', notes:'', source:'LinkedIn', location:'' };
 
 /* ── LocalStorage helpers ── */
 function loadLocal() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; } }
@@ -287,6 +287,7 @@ function AppForm({ initial, onSave, onClose }) {
       <div className="form-grid">
         <div className="field"><label>Company *</label><input value={form.company} onChange={set('company')} placeholder="e.g. Google"/></div>
         <div className="field"><label>Role *</label><input value={form.role} onChange={set('role')} placeholder="e.g. Software Engineer"/></div>
+        <div className="field"><label>Location</label><input value={form.location} onChange={set('location')} placeholder="e.g. Bengaluru / Remote / Hybrid"/></div>
         <div className="field full"><label>Job Link</label><input value={form.link} onChange={set('link')} placeholder="https://..."/></div>
         <div className="field"><label>Date Applied</label><input type="date" value={form.date} onChange={set('date')}/></div>
         <div className="field"><label>Status</label><select value={form.status} onChange={set('status')}>{STATUS_OPTIONS.map(s=><option key={s}>{s}</option>)}</select></div>
@@ -304,8 +305,8 @@ function AppForm({ initial, onSave, onClose }) {
 
 /* ── Bulk Import Modal ── */
 const BULK_EXAMPLE = JSON.stringify([
-  { company: "Google", role: "Software Engineer", date: "2025-05-01", status: "Applied", source: "LinkedIn", link: "https://careers.google.com", notes: "Applied via referral" },
-  { company: "Stripe", role: "Backend Engineer", date: "2025-05-02", status: "OA", source: "Company Website", link: "", notes: "" }
+  { company: "Google", role: "Software Engineer", location: "Bengaluru", date: "2025-05-01", status: "Applied", source: "LinkedIn", link: "https://careers.google.com", notes: "Applied via referral" },
+  { company: "Stripe", role: "Backend Engineer", location: "Remote", date: "2025-05-02", status: "OA", source: "Company Website", link: "", notes: "" }
 ], null, 2);
 
 function BulkImportModal({ onClose, onImport, existingApps }) {
@@ -337,6 +338,7 @@ function BulkImportModal({ onClose, onImport, existingApps }) {
         date, status,
         resume: (item.resume || item.Resume || '').toString().trim(),
         source,
+        location: (item.location || item.Location || '').toString().trim(),
         notes: (item.notes || item.Notes || '').toString().trim(),
       };
     });
@@ -438,6 +440,7 @@ function BulkImportModal({ onClose, onImport, existingApps }) {
                   <tr>
                     <th style={{padding:'7px 10px'}}>Company</th>
                     <th style={{padding:'7px 10px'}}>Role</th>
+                    <th style={{padding:'7px 10px'}}>Location</th>
                     <th style={{padding:'7px 10px'}}>Date</th>
                     <th style={{padding:'7px 10px'}}>Status</th>
                     <th style={{padding:'7px 10px'}}>Source</th>
@@ -448,6 +451,7 @@ function BulkImportModal({ onClose, onImport, existingApps }) {
                     <tr key={i}>
                       <td style={{padding:'7px 10px',fontWeight:'500'}}>{a.company}</td>
                       <td style={{padding:'7px 10px',color:'var(--text2)'}}>{a.role}</td>
+                      <td style={{padding:'7px 10px',color:'var(--text3)'}}>{a.location||'—'}</td>
                       <td style={{padding:'7px 10px',color:'var(--text3)',whiteSpace:'nowrap'}}>{a.date}</td>
                       <td style={{padding:'7px 10px'}}><Badge status={a.status}/></td>
                       <td style={{padding:'7px 10px',color:'var(--text3)'}}>{a.source}</td>
@@ -590,8 +594,8 @@ function ApplicationsView({ apps, onAdd, onEdit, onDelete, onBulkImport }) {
   }, [apps,statusFilter,search,sortField,sortDir]);
 
   const exportCSV = () => {
-    const header = ['Company','Role','Link','Date','Status','Resume','Source','Notes'];
-    const rows = apps.map(a=>[a.company,a.role,a.link,a.date,a.status,a.resume,a.source,a.notes].map(v=>`"${(v||'').replace(/"/g,'""')}"`).join(','));
+    const header = ['Company','Role','Location','Link','Date','Status','Resume','Source','Notes'];
+    const rows = apps.map(a=>[a.company,a.role,a.location,a.link,a.date,a.status,a.resume,a.source,a.notes].map(v=>`"${(v||'').replace(/"/g,'""')}"`).join(','));
     const csv = [header.join(','),...rows].join('\n');
     const blob = new Blob([csv],{type:'text/csv'});
     const url = URL.createObjectURL(blob);
@@ -638,6 +642,7 @@ function ApplicationsView({ apps, onAdd, onEdit, onDelete, onBulkImport }) {
                 <tr>
                   <th>Company <SortIcon field="company"/></th>
                   <th>Role <SortIcon field="role"/></th>
+                  <th>Location</th>
                   <th>Status</th>
                   <th>Date <SortIcon field="date"/></th>
                   <th>Source</th>
@@ -653,6 +658,7 @@ function ApplicationsView({ apps, onAdd, onEdit, onDelete, onBulkImport }) {
                       {a.resume && <div style={{fontSize:'11px',color:'var(--text3)'}}>{a.resume}</div>}
                     </td>
                     <td>{a.link?<a href={a.link} target="_blank" rel="noopener" className="row-link">{a.role}</a>:a.role}</td>
+                    <td style={{color:'var(--text3)',fontSize:'12px',whiteSpace:'nowrap'}}>{a.location||<span style={{color:'var(--text3)'}}>—</span>}</td>
                     <td><Badge status={a.status}/></td>
                     <td style={{color:'var(--text2)',fontSize:'13px',whiteSpace:'nowrap'}}>{a.date}</td>
                     <td style={{color:'var(--text3)',fontSize:'12px'}}>{a.source}</td>
